@@ -50,7 +50,6 @@ export const runPipeline = (text, options = {}) => {
     stats: {
       chars: text.length,
       splits: splits.length,
-      cuts: splits.filter((split) => split.cut).length,
       words: total((node) => node.pairs.length),
       dropped: total((node) => node.dropped),
       folded: total((node) => node.folded),
@@ -61,20 +60,14 @@ export const runPipeline = (text, options = {}) => {
 
 export const explainConfig = (result, config) => {
   const notes = [];
-  const chars = Math.ceil(result.text.length / config.splits);
+  const total = result.stats.words + result.stats.dropped;
 
   notes.push(
-    `${config.splits} requested split${config.splits === 1 ? '' : 's'} of about ${chars} character${
-      chars === 1 ? '' : 's'
-    } produced ${result.splits.length}, because a range with no letters or digits is discarded.`
-  );
-
-  notes.push(
-    result.stats.cuts
-      ? `${result.stats.cuts} boundary${
-          result.stats.cuts === 1 ? '' : 'ies'
-        } fell inside a word, so that word was tokenized as two pieces. Real Hadoop avoids this with record-aware input formats.`
-      : 'No boundary fell inside a word, so every word stayed whole.'
+    `${config.splits} requested split${config.splits === 1 ? '' : 's'} produced ${
+      result.splits.length
+    } of whole words, about ${Math.ceil(total / result.splits.length)} word${
+      Math.ceil(total / result.splits.length) === 1 ? '' : 's'
+    } each, so no word is ever cut in half and the word count never depends on the split count. Real Hadoop splits on byte offsets and can cut a word in half.`
   );
 
   notes.push(

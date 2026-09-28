@@ -8,9 +8,9 @@ export const phases = [
     id: 'input',
     title: 'Input & Splitting',
     question: 'How is the input prepared?',
-    what: 'The text is divided into fixed logical input splits, and each split is assigned to a mapper task. One mapper may receive several splits.',
+    what: 'The text is divided into logical input splits, each holding whole words, and every split is assigned to a mapper task. One mapper may receive several splits.',
     why: 'Mappers work on independent chunks at the same time, so the job finishes faster as more mapper tasks are available.',
-    hadoop: 'Hadoop derives input splits from file block boundaries and schedules them across the cluster. A split is not a block, a mapper, or a machine.'
+    hadoop: 'Hadoop derives input splits from file block boundaries, so a split can cut a word in half. A split is not a block, a mapper, or a machine.'
   },
   {
     id: 'map',

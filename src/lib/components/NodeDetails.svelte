@@ -41,14 +41,14 @@
   </div>
 {:else if split}
   <p class="lede">
-    Characters {split.start} to {split.end} of the input, handed to Mapper {split.mapper}. It holds no
-    character from another split.
+    Words {split.startWord + 1} to {split.startWord + split.words} of the input, handed to Mapper
+    {split.mapper}. It holds whole words only, and shares no word with another split.
   </p>
-  {#if split.cut}
-    <p class="warn">A boundary fell inside a word here, so that word is tokenized as two pieces.</p>
-  {/if}
   <div class="block">
-    <h3>Contents <span class="muted">{split.end - split.start} characters</span></h3>
+    <h3>
+      Contents
+      <span class="muted">{split.words} word{split.words === 1 ? '' : 's'}, {split.end - split.start} characters</span>
+    </h3>
     <pre>{split.text}</pre>
   </div>
   <div class="block">
@@ -66,7 +66,9 @@
     word. It never reads another mapper's output.
   </p>
   {#if mapper.dropped}
-    <p class="warn">{mapper.dropped} stop word{mapper.dropped === 1 ? '' : 's'} dropped before counting.</p>
+    <p class="warn">
+      {mapper.dropped} ignored word{mapper.dropped === 1 ? '' : 's'} dropped before counting.
+    </p>
   {/if}
   <div class="block">
     <h3>

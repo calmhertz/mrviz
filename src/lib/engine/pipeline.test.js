@@ -19,14 +19,21 @@ describe('tokenize', () => {
 });
 
 describe('splitText', () => {
-  it('cuts contiguous character ranges of about equal length', () => {
-    const splits = splitText('abcdefgh', 4);
-    expect(splits.map((split) => split.text)).toEqual(['ab', 'cd', 'ef', 'gh']);
-    expect(splits.map((split) => [split.start, split.end])).toEqual([
+  it('cuts on word boundaries so no word is ever split in half', () => {
+    const splits = splitText('alpha beta gamma delta epsilon', 2);
+    expect(splits.map((split) => split.text.trim())).toEqual(['alpha beta gamma', 'delta epsilon']);
+    expect(splits.map((split) => split.words)).toEqual([3, 2]);
+  });
+
+  it('records the word range and character range of each split', () => {
+    const splits = splitText('aaa bbb ccc ddd', 2);
+    expect(splits.map((split) => [split.startWord, split.words])).toEqual([
       [0, 2],
-      [2, 4],
-      [4, 6],
-      [6, 8]
+      [2, 2]
+    ]);
+    expect(splits.map((split) => [split.start, split.end])).toEqual([
+      [0, 8],
+      [8, 15]
     ]);
   });
 
@@ -36,19 +43,20 @@ describe('splitText', () => {
     expect(splits.map((split) => split.text).join('')).toBe(text);
   });
 
-  it('drops ranges that hold no letters or digits', () => {
-    const splits = splitText('aaaa     bbbb', 4);
-    expect(splits.map((split) => split.text)).toEqual(['aaaa', ' bbb', 'b']);
-    expect(splits.map((split) => split.index)).toEqual([0, 1, 2]);
+  it('gives every split at least one whole word', () => {
+    const splits = splitText('one   two\n\nthree   four', 3);
+    expect(splits).toHaveLength(2);
+    for (const split of splits) expect(split.words).toBeGreaterThan(0);
+    expect(splits.map((split) => split.text)).toEqual(['one   two\n\n', 'three   four']);
   });
 
-  it('flags a boundary that fell inside a word', () => {
-    expect(splitText('abcdefgh', 2).map((split) => split.cut)).toEqual([false, true]);
-    expect(splitText('abcd efgh', 2).map((split) => split.cut)).toEqual([false, false]);
+  it('never produces more splits than there are words', () => {
+    expect(splitText('one two', 8)).toHaveLength(2);
+    expect(splitText('word', 4)).toHaveLength(1);
   });
 
-  it('never produces a range shorter than one character', () => {
-    expect(splitText('word', 8)).toHaveLength(4);
+  it('returns no splits for input without words', () => {
+    expect(splitText('   ...  ', 4)).toEqual([]);
   });
 });
 
@@ -59,7 +67,7 @@ describe('runPipeline', () => {
   });
 
   it('assigns splits round-robin so a mapper can own several splits', () => {
-    const splits = assignMappers(splitText('abcdefgh', 4), 2);
+    const splits = assignMappers(splitText('a b c d e f g h', 4), 2);
     expect(splits.map((split) => split.mapper)).toEqual([0, 1, 0, 1]);
   });
 
@@ -221,20 +229,17 @@ describe('split count', () => {
     expect(many.splits[0].end - many.splits[0].start).toBeLessThan(few.splits[0].end - few.splits[0].start);
   });
 
-  it('keeps the word count identical when no boundary cuts a word', () => {
-    const text = 'aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll';
-    for (const splits of [1, 2, 3, 4, 6]) {
+  it('keeps the word count identical at every split count', () => {
+    const text = 'alpha beta gamma alpha delta beta gamma';
+    for (const splits of [1, 2, 3, 4, 6, 12]) {
       const result = runPipeline(text, { ...config, splits });
-      expect(result.stats.cuts).toBe(0);
-      expect(result.stats.words).toBe(12);
+      expect(result.stats.words).toBe(7);
     }
   });
 
-  it('turns one word into two tokens when a boundary cuts it', () => {
-    const result = runPipeline('abcdefgh', { ...config, splits: 4 });
-    expect(result.stats.cuts).toBe(3);
-    expect(result.stats.words).toBe(4);
-    expect(result.combined.map((item) => item.key)).toEqual(['ab', 'cd', 'ef', 'gh']);
+  it('never counts a fragment of a word as its own key', () => {
+    const result = runPipeline('MapReduce', { ...config, splits: 4 });
+    expect(result.combined.map((item) => item.key)).toEqual(['MapReduce']);
   });
 });
 
@@ -243,7 +248,7 @@ describe('explainConfig', () => {
     const config2 = { mappers: 2, reducers: 2, splits: 1, caseSensitive: false, ignore: 'the' };
     const result = runPipeline('The cat the dog', config2);
     const notes = explainConfig(result, config2);
-    expect(notes).toHaveLength(5);
+    expect(notes).toHaveLength(4);
     expect(notes.join(' ')).toContain('lowercase');
     expect(notes.join(' ')).toContain('Ignoring 1 word (the) dropped 2 of 4 words');
     expect(notes.join(' ')).toContain('2 mappers share 1 split round-robin');
@@ -260,8 +265,11 @@ describe('explainConfig', () => {
     expect(explainConfig(result, strict).join(' ')).toContain('Case is preserved');
   });
 
-  it('calls out a boundary that split a word in half', () => {
-    const result = runPipeline('abcdefgh', { mappers: 1, reducers: 1, splits: 4 });
-    expect(explainConfig(result, { ...config, splits: 4 }).join(' ')).toContain('fell inside a word');
+  it('explains that splitting never cuts a word and differs from Hadoop', () => {
+    const result = runPipeline('alpha beta gamma delta', { mappers: 1, reducers: 1, splits: 2 });
+    const note = explainConfig(result, { ...config, splits: 2 })[0];
+    expect(note).toContain('2 requested splits produced 2');
+    expect(note).toContain('no word is ever cut in half');
+    expect(note).toContain('byte offsets');
   });
 });

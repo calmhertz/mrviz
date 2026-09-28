@@ -1,19 +1,22 @@
-const HAS_WORD = /[\p{L}\p{N}]/u;
-const isWord = (char) => char !== undefined && HAS_WORD.test(char);
+const WORD = /[\p{L}\p{N}]+/gu;
 
 export const splitText = (text, count) => {
-  const size = Math.max(1, Math.ceil(text.length / count));
+  const starts = [...text.matchAll(WORD)].map((match) => match.index);
+  if (!starts.length) return [];
+
+  const per = Math.ceil(starts.length / count);
   const splits = [];
 
-  for (let start = 0; start < text.length; start += size) {
-    const chunk = text.slice(start, start + size);
-    if (!HAS_WORD.test(chunk)) continue;
+  for (let i = 0; i < starts.length; i += per) {
+    const start = starts[i];
+    const end = i + per < starts.length ? starts[i + per] : text.length;
     splits.push({
       index: splits.length,
       start,
-      end: start + chunk.length,
-      cut: isWord(text[start - 1]) && isWord(text[start]),
-      text: chunk
+      end,
+      startWord: i,
+      words: Math.min(per, starts.length - i),
+      text: text.slice(start, end)
     });
   }
 

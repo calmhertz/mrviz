@@ -6,6 +6,7 @@
   let { result, phase, stageIndex, stages, selected = $bindable(null), active = $bindable(null), onStage, onEdit } = $props();
 
   const isLast = $derived(stageIndex === stages.length - 1);
+  const inspecting = $derived(Boolean(selected || active));
 
   function step(delta) {
     onStage(stageIndex + delta);
@@ -20,11 +21,11 @@
 <div class="sim">
   <div class="sim-canvas">
     <header class="canvas-head">
-      <div class="stage-caption">
+      <div class="stage-caption" aria-live="polite">
         <span class="phase-num">{String(stageIndex + 1).padStart(2, '0')}</span>
         <span>{phase.title}</span>
       </div>
-      <div class="stage-bar">
+      <div class="stage-bar" role="progressbar" aria-valuemin="1" aria-valuemax={stages.length} aria-valuenow={stageIndex + 1} aria-label="Stage progress">
         <div class="stage-progress" style="width: {((stageIndex + 1) / stages.length) * 100}%"></div>
       </div>
     </header>
@@ -34,13 +35,14 @@
 
   <aside class="sim-panel">
     <div class="panel-head">
-      {#if selected || active}
+      {#if inspecting}
         <button type="button" class="back" onclick={clearFocus}>
           <span aria-hidden="true">&larr;</span> Stage details
         </button>
       {/if}
+      <span class="eyebrow">Stage {String(stageIndex + 1).padStart(2, '0')} of {String(stages.length).padStart(2, '0')}</span>
       <h2>{selected ? 'Node' : active ? 'Data flow' : phase.title}</h2>
-      <p class="question">{selected || active ? 'Inspecting one connection' : phase.question}</p>
+      <p class="question">{inspecting ? 'Inspecting one connection' : phase.question}</p>
     </div>
 
     <div class="panel-body">
@@ -63,7 +65,7 @@
     </div>
 
     <div class="panel-nav">
-      <button type="button" class="plain" onclick={onEdit}>Edit input</button>
+      <button type="button" class="ghost" onclick={onEdit}>Edit input</button>
       <div class="nav-pair">
         <button type="button" class="plain" disabled={stageIndex === 0} onclick={() => step(-1)}>Previous</button>
         {#if isLast}
