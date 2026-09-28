@@ -1,0 +1,21 @@
+{
+  "name": "mrviz",
+  "version": "1.0.0",
+  "description": "Interactive step-by-step visualizer for the Hadoop MapReduce model",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "happy-dom": "^20.14.5",
+    "svelte": "^5.57.1",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  },
+  "author": "",
+  "license": "ISC"
+}
